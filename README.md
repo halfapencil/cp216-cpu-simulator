@@ -125,7 +125,8 @@ The simulator is implemented in Python as a modular program with object-oriented
 The simulator features a graphical user interface (GUI) similar to CPULator, with the following components:
 
 ### User Interface 
-![Rough Sketch of the UI](https://docs.google.com/drawings/d/1eIxM4rzvOCttduJSpcKrwnlnlIaacZ7HpclfvBLca6k/pub?w=960&h=720 "Rough Sketch of UI")
+![image](https://github.com/user-attachments/assets/5dbf1004-c9a7-4129-8a26-15717bfa59ce)
+
 
 ### Register Display
 - **Headline**: "Register Contents"

@@ -125,7 +125,7 @@ The simulator is implemented in Python as a modular program with object-oriented
 The simulator features a graphical user interface (GUI) similar to CPULator, with the following components:
 
 ### User Interface 
-![Rough Sketch of the UI](https://docs.google.com/drawings/d/1eIxM4rzvOCttduJSpcKrwnlnlIaacZ7HpclfvBLca6k/edit?usp=sharing "Rough Sketch of UI")
+![Rough Sketch of the UI](https://docs.google.com/drawings/d/1eIxM4rzvOCttduJSpcKrwnlnlIaacZ7HpclfvBLca6k/pub?w=960&h=720 "Rough Sketch of UI")
 
 ### Register Display
 - **Headline**: "Register Contents"
@@ -178,9 +178,3 @@ The simulator features a graphical user interface (GUI) similar to CPULator, wit
   01000010000001010000              ; Thumb: ADD r5, r1
   0100001011000100                  ; Thumb: MOV r4, r3
   ```
-
-## Development Plan
-- **Week 1–4**: Implement Main Memory, Registers, and file reading.
-- **Week 5–6**: Develop Decoder for ARM and Thumb instructions.
-- **Week 7**: Implement Executor, ALU, and pipeline stages.
-- **Week 8**: Integrate components, develop GUI, test with sample programs, and finalize output display.

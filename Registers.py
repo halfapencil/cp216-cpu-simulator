@@ -9,11 +9,15 @@ class Registers:
         self.ir = ["", ""]  # Instruction Register: [opcode, operands]
         self.flags = {"Z": 0, "N": 0}  # Condition flags: Zero, Negative
 
+    """
+    Get value of a register 'reg_name' to 'value'. Returns true if operation succesful
+    """
     def get_register_value(self, reg_name):
         # Retrieve value of a register by name (e.g., "r0", "sp", "pc")
-        if reg_name in [f"r{i}" for i in range(13)]:
-            index = int(reg_name[1:])
-            return self.register_bank[index][1]
+        if reg_name[0] == "r":
+            index = reg_name[1:]
+            if index.isnumeric and (int(index) >= 0 and int(index) < 13):
+                return self.register_bank[int(index)][1]
         elif reg_name == "sp":
             return self.sp
         elif reg_name == "lr":
@@ -22,14 +26,19 @@ class Registers:
             return self.pc
         return None
 
+    """
+    Set value of a register 'reg_name' to 'value'. Returns true if operation succesful
+    """
     def set_register_value(self, reg_name, value):
         # Set value of a register (32-bit binary string or hex for pc)
-        if len(value) != 32 and reg_name != "pc":
+        if len(value) != 32 and reg_name != "pc": # Check if value to be added
             return False
-        if reg_name in [f"r{i}" for i in range(13)]:
-            index = int(reg_name[1:])
-            self.register_bank[index][1] = value[:32]  # Ensure 32-bit
-            return True
+        if reg_name[0] == "r":
+            index = reg_name[1:]
+            if index.isnumeric and (index >= 0 and index < 13):
+                self.register_bank[int(index)][1] = value[:32]  # Ensure 32-bit
+                return True
+            return False
         elif reg_name == "sp":
             self.sp = value[:32]
             return True

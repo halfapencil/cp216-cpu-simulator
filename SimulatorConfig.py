@@ -49,12 +49,17 @@ class SimulatorConfig:
             return False
 
     def load_binary_file(self, file_path):
-        # Use parse_binary_file to load and separate instructions
-        if self.parse_binary_file(file_path):
-            # Reset PC to start of memory
+        try:
+            with open(file_path, "r") as f:
+                for line in f:
+                    binary = line.split("#")[0].strip()
+                    if binary and (len(binary) == 32 or len(binary) == 16):
+                        self.memory.store_mem_cell(binary)
             self.registers.set_register_value("pc", "0x00")
             return True
-        return False
+        except Exception as e:
+            print(f"Error loading file: {e}")
+            return False
 
     def run(self):
         self.gui.run()

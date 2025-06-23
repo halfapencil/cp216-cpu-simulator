@@ -4,16 +4,21 @@ class ARMSimulator:
     def __init__(self):
         # Initialize 16 registers (R0-R15, R15 is PC)
         self.registers = [0] * 16
-        # Initialize memory (1024 bytes, word-aligned)
+        # Initialize memory (1024 words, word-aligned)
         self.memory = [0] * 1024
         # Instruction mode: 0 for ARM, 1 for Thumb
         self.mode = 0
         # Condition flags
         self.flags = {'N': 0, 'Z': 0, 'C': 0, 'V': 0}
+        # Track instruction sizes (32 or 16 bits)
+        self.instr_sizes = []
+        # Track modified memory indices
+        self.modified_memory = set()
 
     def load_binary(self, filename):
         """Read text file with binary strings (0s and 1s) for ARM/Thumb instructions."""
         instructions = []
+        self.instr_sizes = []
         with open(filename, 'r') as f:
             for line in f:
                 line = line.strip()  # Remove whitespace
@@ -25,16 +30,15 @@ class ARMSimulator:
                 if not all(c in '01' for c in line):
                     print(f"Invalid binary string: {line}")
                     continue
+                # Check instruction length
+                if len(line) not in (16, 32):
+                    print(f"Invalid instruction length: {len(line)} bits in {line}")
+                    continue
                 # Convert binary string to integer
                 try:
                     instr = int(line, 2)
-                    # Validate instruction length
-                    if len(line) == 32 and self.mode == 0:  # ARM instruction
-                        instructions.append(instr)
-                    elif len(line) == 16 and self.mode == 1:  # Thumb instruction
-                        instructions.append(instr)
-                    else:
-                        print(f"Invalid instruction length: {line} (mode: {'Thumb' if self.mode == 1 else 'ARM'})")
+                    instructions.append(instr)
+                    self.instr_sizes.append(len(line))  # Store 32 or 16 bits
                 except ValueError:
                     print(f"Error parsing binary string: {line}")
         return instructions
@@ -50,7 +54,7 @@ class ARMSimulator:
         imm8 = instr & 0xFF
         offset = (instr & 0xFFFFFF) << 2  # Branch offset
 
-        # ARM Instructions
+        # Data Processing
         if (instr >> 25) & 0x7 == 0:  # Data Processing
             if opcode == 0x0:  # AND
                 return f"AND R{rd}, R{rn}, R{rm}"
@@ -64,19 +68,21 @@ class ARMSimulator:
                 return f"CMP R{rn}, R{rm}"
             elif opcode == 0xC:  # ORR
                 return f"ORR R{rd}, R{rn}, R{rm}"
-            elif opcode == 0xE:  # MOV
-                return f"MOV R{rd}, #{imm}"
-        elif (instr >> 25) & 0x7 == 0x1:  # Load/Store
+        elif (instr >> 25) & 0x7 == 0x1:  # Load/Store or MOV immediate
             if (instr >> 20) & 0x1:  # LDR
                 return f"LDR R{rd}, [R{rn}, #{imm8}]"
+            elif (instr >> 4) & 0xFF == 0xA:  # MOV immediate
+                return f"MOV R{rd}, #{imm}"
             else:  # STR
                 return f"STR R{rd}, [R{rn}, #{imm8}]"
+        # Branch
         elif (instr >> 25) & 0x7 == 0x5:  # Branch
             # Sign-extend offset
             if offset & 0x2000000:
                 offset -= 0x4000000
             return f"B {offset}"
-        elif (instr & 0xFF000F0) == 0x1200010:  # BX
+        # BX
+        elif (instr & 0x0FFFFFF0) == 0x012FFF10:  # BX pattern
             rm = instr & 0xF
             return f"BX R{rm}"
         return "UNKNOWN"
@@ -135,24 +141,27 @@ class ARMSimulator:
             elif opcode == 0xC:  # ORR
                 self.registers[rd] = self.registers[rn] | self.registers[rm]
                 self.update_flags(self.registers[rd])
-            elif opcode == 0xE:  # MOV
+        # Load/Store or MOV immediate
+        elif (instr >> 25) & 0x7 == 0x1:
+            if (instr >> 4) & 0xFF == 0xA:  # MOV immediate
                 self.registers[rd] = imm
                 self.update_flags(self.registers[rd])
-        # Load/Store
-        elif (instr >> 25) & 0x7 == 0x1:
-            addr = self.registers[rn] + imm8
-            if addr >= 0 and addr < len(self.memory) - 3:
-                if (instr >> 20) & 0x1:  # LDR
-                    self.registers[rd] = self.memory[addr >> 2]
-                else:  # STR
-                    self.memory[addr >> 2] = self.registers[rd]
+            else:
+                addr = self.registers[rn] + imm8
+                if addr >= 0 and addr < len(self.memory) * 4:
+                    idx = addr // 4
+                    if (instr >> 20) & 0x1:  # LDR
+                        self.registers[rd] = self.memory[idx]
+                    else:  # STR
+                        self.memory[idx] = self.registers[rd]
+                        self.modified_memory.add(idx)
         # Branch
         elif (instr >> 25) & 0x7 == 0x5:
             if offset & 0x2000000:
                 offset -= 0x4000000
             self.registers[15] += offset + 8  # Account for pipeline
         # BX
-        elif (instr & 0xFF000F0) == 0x1200010:
+        elif (instr & 0x0FFFFFF0) == 0x012FFF10:
             self.registers[15] = self.registers[rm] & 0xFFFFFFFE
             self.mode = 1 if self.registers[rm] & 0x1 else 0
 
@@ -186,20 +195,31 @@ class ARMSimulator:
         """Update condition flags."""
         self.flags['Z'] = 1 if result == 0 else 0
         self.flags['N'] = 1 if result < 0 else 0
-        # Simplified carry and overflow
         self.flags['C'] = 0
         self.flags['V'] = 0
 
     def run(self, instructions):
         """Run the simulator."""
         self.registers[15] = 0  # Initialize PC
-        while 0 <= self.registers[15] < len(instructions) * (2 if self.mode == 1 else 4):
-            idx = self.registers[15] // (2 if self.mode == 1 else 4)
+        while 0 <= self.registers[15] < sum((s // 8 for s in self.instr_sizes)):
+            idx = 0
+            byte_offset = 0
+            # Find instruction index based on PC and instruction sizes
+            for i, size in enumerate(self.instr_sizes):
+                if byte_offset <= self.registers[15] < byte_offset + (size // 8):
+                    idx = i
+                    break
+                byte_offset += size // 8
             if idx >= len(instructions):
                 break
             instr = instructions[idx]
+            # Format binary string
+            binary = format(instr, '032b' if self.mode == 0 else '016b')
+            # Add spaces every 4 bits for readability
+            binary = ' '.join(binary[i:i+4] for i in range(0, len(binary), 4))
+            instr_type = "ARM" if self.mode == 0 else "Thumb"
             decoded = self.decode_thumb(instr) if self.mode == 1 else self.decode_arm(instr)
-            print(f"PC: {self.registers[15]:08x}, Instr: {instr:08x}, Decoded: {decoded}")
+            print(f"PC: {self.registers[15]:08x}, Instr: {instr:08x}, Binary: {binary}, Type: {instr_type}, Decoded: {decoded}")
             if self.mode == 1:
                 self.execute_thumb(instr)
                 if decoded.startswith("BX"):
@@ -209,7 +229,12 @@ class ARMSimulator:
                 self.execute_arm(instr)
                 self.registers[15] += 4
             print(f"Registers: {self.registers}")
-            print(f"Memory: {self.memory[:10]}...")
+            # Display only modified memory cells with addresses
+            if self.modified_memory:
+                memory_output = {f"0x{i*4:08x}": self.memory[i] for i in sorted(self.modified_memory)}
+                print(f"Modified Memory: {memory_output}")
+            else:
+                print("Modified Memory: {}")
             print(f"Flags: {self.flags}\n")
 
 if __name__ == "__main__":

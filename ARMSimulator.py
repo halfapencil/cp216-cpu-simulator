@@ -219,7 +219,7 @@ class ARMSimulator:
             binary = ' '.join(binary[i:i+4] for i in range(0, len(binary), 4))
             instr_type = "ARM" if self.mode == 0 else "Thumb"
             decoded = self.decode_thumb(instr) if self.mode == 1 else self.decode_arm(instr)
-            print(f"PC: {self.registers[15]:08x}, Instr: {instr:08x}, Binary: {binary}, Type: {instr_type}, Decoded: {decoded}")
+            print(f"PC: {self.registers[15]:08x}, Instr: {instr:08x}, Binary: {binary}, Decoded: {decoded}")
             if self.mode == 1:
                 self.execute_thumb(instr)
                 if decoded.startswith("BX"):
@@ -229,12 +229,6 @@ class ARMSimulator:
                 self.execute_arm(instr)
                 self.registers[15] += 4
             print(f"Registers: {self.registers}")
-            # Display only modified memory cells with addresses
-            if self.modified_memory:
-                memory_output = {f"0x{i*4:08x}": self.memory[i] for i in sorted(self.modified_memory)}
-                print(f"Modified Memory: {memory_output}")
-            else:
-                print("Modified Memory: {}")
             print(f"Flags: {self.flags}\n")
 
 if __name__ == "__main__":
@@ -247,5 +241,5 @@ if __name__ == "__main__":
     sim.registers[1] = 40 + 1  # Set R1 to Thumb start (40 bytes + 1 for Thumb mode)
     sim.registers[2] = 4       # Set R2 for STR/LDR (valid memory address)
     sim.registers[6] = 0       # Set R6 for final BX (halt)
-    instructions = sim.load_binary("test.txt")
+    instructions = sim.load_binary("test_2")
     sim.run(instructions)

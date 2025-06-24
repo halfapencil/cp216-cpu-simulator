@@ -219,7 +219,7 @@ class ARMSimulator:
             binary = ' '.join(binary[i:i+4] for i in range(0, len(binary), 4))
             instr_type = "ARM" if self.mode == 0 else "Thumb"
             decoded = self.decode_thumb(instr) if self.mode == 1 else self.decode_arm(instr)
-            print(f"PC: {self.registers[15]:08x}, Instr: {instr:08x}, Binary: {binary}, Decoded: {decoded}")
+            print(f"PC: {self.registers[15]:08x}, Binary: {binary}, Decoded: {decoded}")
             if self.mode == 1:
                 self.execute_thumb(instr)
                 if decoded.startswith("BX"):
@@ -236,6 +236,5 @@ if __name__ == "__main__":
     sim.mode = 0  # Start in ARM mode
     sim.registers[1] = 40 + 1  # Set R1 to Thumb start (40 bytes + 1 for Thumb mode)
     sim.registers[2] = 4       # Set R2 for STR/LDR (valid memory address)
-    sim.registers[6] = 0       # Set R6 for final BX (halt)
-    instructions = sim.load_binary("test_2")
+    instructions = sim.load_binary("test") # <---- Put file adress of test file
     sim.run(instructions)

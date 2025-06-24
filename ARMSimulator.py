@@ -232,10 +232,6 @@ class ARMSimulator:
             print(f"Flags: {self.flags}\n")
 
 if __name__ == "__main__":
-    """if len(sys.argv) != 2:
-        print("Usage: python simulator.py <text_file>")
-        sys.exit(1)"""
-    
     sim = ARMSimulator()
     sim.mode = 0  # Start in ARM mode
     sim.registers[1] = 40 + 1  # Set R1 to Thumb start (40 bytes + 1 for Thumb mode)

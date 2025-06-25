@@ -1,5 +1,9 @@
 # ARMv7 and Thumb Simulator Design Document
 
+## To run program
+- Set the file path in the instructions variable, isnide the main function, to the location of the binary source file you want to use. Premade test files are available for quick use (called 'test', 'test_2', 'test_3').
+- Run the ArmSimulator.py file with Python 3. 
+
 ## Product Requirements
 
 ### Read ARM/Thumb Machine Code File
@@ -20,15 +24,6 @@
   - Performing arithmetic or logical operations (e.g., ADD, SUB, AND).
   - Updating the program counter (e.g., via B instructions).
 - Instructions are executed in a pipelined manner with fetch, decode, and execute stages.
-
-### Display Results
-- After each instruction execution, the simulator displays:
-  - The current instruction (in assembly format) with an ARM or Thumb indicator.
-  - Updated register values (r0–r15), with the modified register highlighted in red and the Program Counter (r15) with a light green background flashing on each new instruction.
-  - Modified or accessed memory locations, highlighted in red, with a searchable address input to view specific cells.
-- The simulator supports two modes:
-  - Step-by-step: Displays each instruction, register, and memory state; user presses "Next Instruction" to proceed.
-  - Full execution: Runs all instructions and displays the final state with "Continue to End of Program."
 
 ### Supported Instructions
 The simulator supports the following 15 instructions (covering both ARM and Thumb formats):
@@ -121,51 +116,8 @@ The simulator is implemented in Python as a modular program with object-oriented
 - Handles mode switching (ARM vs. Thumb) based on branch instructions or mode flags.
 - Ensures proper sequencing and handles exceptions (e.g., invalid instructions).
 
-## GUI Design
-The simulator features a graphical user interface (GUI) similar to CPULator, with the following components:
-
-### User Interface 
-![image](https://github.com/user-attachments/assets/5dbf1004-c9a7-4129-8a26-15717bfa59ce)
-
-
-### Register Display
-- **Headline**: "Register Contents"
-- Displays all 16 registers (r0–r15) in a compact table (reduced height compared to memory table).
-  - Columns: Register name (e.g., r0, r1, ..., r15), Value (32-bit binary or decimal).
-  - The register being modified is highlighted in red.
-  - The Program Counter (r15) has a light green background that flashes each time a new instruction is executed.
-
-### Memory Display
-- **Headline**: "Memory Contents"
-- Displays the main memory in a table.
-  - Columns: Mem Addr (hexadecimal), Value (binary or data).
-  - The current memory cell being modified or accessed is highlighted in red.
-- **Headline**: "Search Memory Address"
-- Includes a text input box to enter a memory address (hexadecimal) and display the corresponding cell's value.
-
-### Instruction Display
-- **Headline**: "Current Instruction"
-- Shows the current binary string (16/32-bit) being accessed, e.g., "0000 0000 0000 0000".
-- Displays the decoded instruction, e.g., "mov r1, r2".
-- Includes indicators:
-  - A red square next to "ARM" when in ARM mode.
-  - A red square next to "THUMB" when in Thumb mode (only one is active at a time).
-
-### File Input Area
-- **Headline**: "Upload Source File"
-- Contains a "Choose file" button to select and upload a binary instruction file.
-- Once uploaded, the file is loaded into memory to start the simulation.
-
-### Control Buttons
-- **Headline**: "Simulation Controls"
-- Includes the following buttons:
-  - "Next Instruction": Advances to the next instruction step-by-step.
-  - "Continue to End of Program": Executes all remaining instructions and displays the final state.
-  - "Start Simulation": Initiates the simulation after a file is uploaded.
-
 ## Implementation Details
-- **Language**: Python 3 (with a GUI framework like Tkinter or PyQt).
-- **Interface**: Graphical user interface as described above.
+- **Language**: Python 3.
 - **Error Handling**:
   - Validates binary file format and instruction integrity.
   - Reports invalid opcodes or malformed instructions.
@@ -173,9 +125,3 @@ The simulator features a graphical user interface (GUI) similar to CPULator, wit
   - ARM: 32-bit, based on ARMv7 reference manual (e.g., opcode in bits 31–28, operands vary).
   - Thumb: 16-bit, based on Thumb instruction set (e.g., opcode in bits 15–10).
 - **Sample Input File**:
-  ```
-  11100010100000010010000000000011  ; ARM: ADD r1, r2, r3
-  11100011101000000000000000000001  ; ARM: MOV r0, #1
-  01000010000001010000              ; Thumb: ADD r5, r1
-  0100001011000100                  ; Thumb: MOV r4, r3
-  ```

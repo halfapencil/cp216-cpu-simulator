@@ -29,9 +29,7 @@ class CacheSim:
         for line in f:
             self.main_memory.append(line)       # add instructions to main memory
         program_size = len(self.main_memory)*4
-        print(self.main_memory)
         for pc in range(0,program_size,4):
-
             # determine blockid and tag
             block_id = (pc // self.blocksize) %self.i_block
             tag = (pc % self.blocksize) // self.i_block
@@ -67,10 +65,14 @@ class CacheSim:
             if d_line is None or d_line['tag'] != d_tag:
                 self.d_miss += 1
                 
+                #writeback condition
                 if d_line is not None and d_line.get('dirty',False):
                     self.writeback += 1
         
+                # add instruction to d_cache and set the dirty bit to whether the instruction is store or load
                 self.d_cache[d_blockid] = {'tag':d_tag, 'dirty':store}
+            
+            # if its a store operation make the dirty bit true
             elif store:
                 self.d_cache[blocksize]['dirty'] = True
 
@@ -85,8 +87,8 @@ class CacheSim:
 
 
 if __name__ == "__main__":
-    blocksize = 16          #Block size available for 4,8,16,32 bytes
-    unifiedsize = 64        #unified size available for 16,32,64 bytes
+    blocksize = 8          #Block size available for 4,8,16,32 bytes
+    unifiedsize = 32        #unified size available for 16,32,64 bytes
     sim = CacheSim(blocksize,unifiedsize)
     sim.simulate("test")
     sim.output()

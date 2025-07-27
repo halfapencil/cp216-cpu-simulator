@@ -83,12 +83,17 @@ class CacheSim:
     #debugging
     def output(self):
         print(str(self.i_miss) + " " + str(self.d_miss) + " "+ str(self.l2_miss)+" " + str(self.writeback))
+        cost = 0.5 * (self.i_miss+self.d_miss) +self.l2_miss +self.writeback
+        print("Cost: " + str(cost))
 
 
 
 if __name__ == "__main__":
-    blocksize = 8          #Block size available for 4,8,16,32 bytes
-    unifiedsize = 32        #unified size available for 16,32,64 bytes
-    sim = CacheSim(blocksize,unifiedsize)
-    sim.simulate("test")
-    sim.output()
+    blocksize = [4,8,16,32]          #Block size available for 4,8,16,32 bytes
+    unifiedsize = [16,32,64]        #unified size available for 16,32,64 bytes
+    for i in blocksize:
+        for j in unifiedsize:
+            sim = CacheSim(i,j)
+            sim.simulate("test")
+            print(str(i) + " " + str(j))
+            sim.output()

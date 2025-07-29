@@ -33,31 +33,55 @@ class ARMSimulator:
         return instructions
 
     def decode_arm(self, instr):
+        cond = (instr >> 28) & 0xF
         opcode = (instr >> 21) & 0xF
+        s_bit = (instr >> 20) & 0x1
+        i_bit = (instr >> 25) & 0x1  # Immediate flag
+
         rd = (instr >> 12) & 0xF
         rn = (instr >> 16) & 0xF
         rm = instr & 0xF
         imm = instr & 0xFFF
         imm8 = instr & 0xFF
         offset = (instr & 0xFFFFFF) << 2
-        if (instr >> 25) & 0x7 == 0:
-            if opcode == 0x0: return f"AND R{rd}, R{rn}, R{rm}"
-            elif opcode == 0x1: return f"EOR R{rd}, R{rn}, R{rm}"
-            elif opcode == 0x2: return f"SUB R{rd}, R{rn}, R{rm}"
-            elif opcode == 0x4: return f"ADD R{rd}, R{rn}, R{rm}"
-            elif opcode == 0xA: return f"CMP R{rn}, R{rm}"
-            elif opcode == 0xC: return f"ORR R{rd}, R{rn}, R{rm}"
-        elif (instr >> 25) & 0x7 == 0x1:
-            if (instr >> 20) & 0x1: return f"LDR R{rd}, [R{rn}, #{imm8}]"
-            elif (instr >> 4) & 0xFF == 0xA: return f"MOV R{rd}, #{imm}"
-            else: return f"STR R{rd}, [R{rn}, #{imm8}]"
-        elif (instr >> 25) & 0x7 == 0x5:
-            if offset & 0x2000000: offset -= 0x4000000
+
+        # Data processing instructions
+        if (instr >> 26) & 0b11 == 0b00:
+            if opcode == 0x0:  # AND
+                return f"AND R{rd}, R{rn}, #{imm}" if i_bit else f"AND R{rd}, R{rn}, R{rm}"
+            elif opcode == 0x1:  # EOR
+                return f"EOR R{rd}, R{rn}, #{imm}" if i_bit else f"EOR R{rd}, R{rn}, R{rm}"
+            elif opcode == 0x2:  # SUB
+                return f"SUB R{rd}, R{rn}, #{imm}" if i_bit else f"SUB R{rd}, R{rn}, R{rm}"
+            elif opcode == 0x4:  # ADD
+                return f"ADD R{rd}, R{rn}, #{imm}" if i_bit else f"ADD R{rd}, R{rn}, R{rm}"
+            elif opcode == 0xA:  # CMP
+                return f"CMP R{rn}, #{imm}" if i_bit else f"CMP R{rn}, R{rm}"
+            elif opcode == 0xC:  # ORR
+                return f"ORR R{rd}, R{rn}, #{imm}" if i_bit else f"ORR R{rd}, R{rn}, R{rm}"
+            elif opcode == 0xD:  # MOV
+                return f"MOV R{rd}, #{imm}" if i_bit else f"MOV R{rd}, R{rm}"
+
+        # Load/Store instructions
+        elif (instr >> 26) & 0b11 == 0b01:
+            if (instr >> 20) & 0x1:  # LDR
+                return f"LDR R{rd}, [R{rn}, #{imm8}]"
+            else:  # STR
+                return f"STR R{rd}, [R{rn}, #{imm8}]"
+
+        # Branch
+        elif (instr >> 25) & 0x7 == 0b101:
+            if offset & 0x2000000:
+                offset -= 0x4000000
             return f"B {offset}"
+
+        # Branch and exchange
         elif (instr & 0x0FFFFFF0) == 0x012FFF10:
             rm = instr & 0xF
             return f"BX R{rm}"
+
         return "UNKNOWN"
+
 
     def decode_thumb(self, instr):
         opcode = (instr >> 10) & 0x3F
@@ -136,39 +160,38 @@ class ARMSimulator:
 
     def run(self, instructions):
         self.registers[15] = 0
-        while 0 <= self.registers[15] < sum((s // 8 for s in self.instr_sizes)):
-            idx = 0
-            byte_offset = 0
-            for i, size in enumerate(self.instr_sizes):
-                if byte_offset <= self.registers[15] < byte_offset + (size // 8):
-                    idx = i
-                    break
-                byte_offset += size // 8
-            if idx >= len(instructions): break
+        pc = self.registers[15]
 
+        while pc < len(instructions) * 4:
+            idx = pc // 4
             instr = instructions[idx]
+
             if self.cache_enabled:
-                self.cache.access_instruction(self.registers[15])
+                self.cache.access_instruction(pc)
 
             decoded = self.decode_thumb(instr) if self.mode == 1 else self.decode_arm(instr)
-            print(f"PC: {self.registers[15]:08x}, Decoded: {decoded}")
+            print(f"PC: {pc:08x}, Decoded: {decoded}")
 
             if self.mode == 1:
                 self.execute_thumb(instr)
-                if decoded.startswith("BX"): continue
-                self.registers[15] += 2
+                if decoded.startswith("BX"):
+                    pc = self.registers[15]
+                    continue
+                pc += 2
             else:
                 self.execute_arm(instr)
-                self.registers[15] += 4
+                pc += 4
+
+            self.registers[15] = pc
 
             print(f"Registers: {self.registers}")
-            print(f"Flags: {self.flags}\\n")
+            print(f"Flags: {self.flags}\n")
 
 if __name__ == "__main__":
     sim = ARMSimulator(blocksize=8, unified_size=32)
     sim.mode = 0
     sim.registers[1] = 41
     sim.registers[2] = 4
-    instructions = sim.load_binary("test_mixed")
+    instructions = sim.load_binary("test_mixed.txt")
     sim.run(instructions)
     sim.cache.output()

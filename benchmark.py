@@ -6,7 +6,7 @@ configs = [
     (4, 64), (8, 64), (16, 64), (32, 64)
 ]
 
-benchmarks = ["test_load_heavy.txt", "test_jump_heavy.txt", "test_mixed.txt"]
+benchmarks = ["test_load_heavy.txt"]
 
 for bench in benchmarks:
     print(f"\n--- Benchmark: {bench} ---")
